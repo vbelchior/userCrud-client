@@ -3,8 +3,12 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "clean": "rm -rf hooks platforms plugins dist *.tgz *.DS_Store",
     "start": "ng serve",
-    "build": "ng build",
+    "build:app": "ng build --configuration production",
+		"build:dev": "ng build --configuration develop",
+		"bundle:app": "npm run clean && ng build --configuration production && npm pack",
+		"bundle:dev": "npm run clean && ng build --configuration develop && npm pack",
     "watch": "ng build --watch --configuration development",
     "reset": "npm cache clean --force && rm -rf ./node_modules && rm package-lock.json",
     "update": "ncu -u -x rxjs,typescript && npm install",
