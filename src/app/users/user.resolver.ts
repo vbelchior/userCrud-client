@@ -31,8 +31,8 @@ export class UserResolver implements Resolve<UserEntity> {
     this.userService
       .retrieve(Number(idPath))
       .toPromise()
-      .then((vehicle: UserEntity) => {
-        subject.next(new UserEntity(vehicle));
+      .then((user: UserEntity) => {
+        subject.next(new UserEntity(user));
       })
       .catch(() => {
         subject.next(new UserEntity());
