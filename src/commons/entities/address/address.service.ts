@@ -4,6 +4,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { AddressEntity } from './address.entity';
 import { environment } from '@environments/environment';
 import { TypeUtil } from '@commons/utils';
+import { ViaCep } from './address.entity';
 
 @Injectable()
 export class AddressService {
@@ -37,5 +38,11 @@ export class AddressService {
     const path: string = `${environment.server}/addresses/${id}`;
     let query: HttpParams = new HttpParams();
     return this.httpClient.delete(path, { params: query });
+  }
+
+  public searchByCep(code: string): Observable<ViaCep> {
+    if (code.length != 8) return;
+    const path: string = `https://viacep.com.br/ws/${code}/json`;
+    return this.httpClient.get<ViaCep>(path);
   }
 }

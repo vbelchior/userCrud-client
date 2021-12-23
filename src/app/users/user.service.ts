@@ -41,14 +41,12 @@ export class UserService {
 
   public filter(
     nameLike?: string,
-    titleLike?: string,
     offset?: number,
     limit?: number
   ): Observable<UserEntity[]> {
     const path: string = `${environment.server}/users`;
     let query: HttpParams = new HttpParams();
     if (TypeUtil.hasText(nameLike)) query = query.set('nameLike', nameLike);
-    if (TypeUtil.hasText(titleLike)) query = query.set('titleLike', titleLike);
     if (TypeUtil.exists(offset)) query = query.set('offset', String(offset));
     if (TypeUtil.exists(limit)) query = query.set('limit', String(limit));
     return this.httpClient.get<UserEntity[]>(path, { params: query });

@@ -15,8 +15,6 @@ import { environment } from '@commons/environments';
 import { AppComponent } from './app.component';
 import { AccountModule } from '../app/account/account.module';
 import { AddressModule } from '@commons/entities/address';
-import { HomeModule } from '../app/home/home.module';
-import { VehicleModule } from '../app/vehicles/vehicle.module';
 import { UserModule } from '../app/users/user.module';
 
 registerLocaleData(localePt); // FIXME: set this dynamically
@@ -24,7 +22,7 @@ registerLocaleData(localePt); // FIXME: set this dynamically
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'home',
+    redirectTo: 'users',
     pathMatch: 'full',
   },
 ];
@@ -43,8 +41,6 @@ export const routes: Routes = [
     }),
     AccountModule,
     AddressModule,
-    HomeModule,
-    VehicleModule,
     UserModule,
     InterceptorModule.forRoot({ serverUrl: environment.server }),
     RouterModule.forRoot(routes),

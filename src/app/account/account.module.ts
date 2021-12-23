@@ -25,10 +25,9 @@ import { BrowserModule } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule, Routes } from '@angular/router';
 
-import { LoginComponent } from './login.component';
 import { AccountService } from './account.service';
 
-export const routes: Routes = [{ path: 'login', component: LoginComponent }];
+export const routes: Routes = [];
 
 @NgModule({
   declarations: [],

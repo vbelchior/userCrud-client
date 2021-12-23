@@ -1,15 +1,23 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
-import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  ignoreElements,
+  map,
+} from 'rxjs/operators';
 import { AddressEntity, ViaCep } from '@commons/entities/address';
 import { HttpClient } from '@angular/common/http';
-import { TypeUtil } from '@commons/utils';
-import { UserEntity, FEATURE_CLIENT_DEFAULT } from './user.entity';
-import { UserService } from './user.service';
 import { Observable } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { ActivatedRoute } from '@angular/router';
+import { TypeUtil } from '@commons/utils';
+
 import { AddressService } from '@commons/entities/address/address.service';
+import { CpfValidator } from '@commons/validator';
+import { UserService } from './user.service';
+import { UserEntity } from './user.entity';
 
 /**
  * @title Card with multiple sections
@@ -18,22 +26,37 @@ import { AddressService } from '@commons/entities/address/address.service';
   selector: `user`,
   template: `
     <div fxLayoutAlign="center center">
-      <mat-card>
-        <div fxLayout="row" fxLayoutAlign="start baseline" class="header">
-          <button mat-icon-button (click)="onBackRoute()" aria-label="Voltar">
-            <mat-icon class="material-icons-outlined">arrow_backward</mat-icon>
+      <mat-card class="mat-elevation-z4">
+        <div fxLayout="row" fxLayoutAlign="space-between" class="header">
+          <div fxLayout="row" fxLayoutAlign="start center">
+            <button mat-icon-button (click)="onBackRoute()" aria-label="Voltar">
+              <mat-icon class="material-icons-outlined "
+                >arrow_backward</mat-icon
+              >
+            </button>
+            <h2>Usuário</h2>
+          </div>
+          <button
+            mat-stroked-button
+            color="warn"
+            *ngIf="userExists"
+            (click)="onDeleteUser()"
+          >
+            EXCLUIR
           </button>
-          <h2>Usuário</h2>
         </div>
         <mat-stepper orientation="vertical" #stepper>
           <mat-step [stepControl]="userGroup">
             <form [formGroup]="userGroup" fxLayout="column">
-              <ng-template matStepLabel>Informações pessoais</ng-template>
+              <ng-template matStepLabel> Informações pessoais</ng-template>
               <mat-form-field appearance="outline" fxFlex="80">
                 <mat-label>Nome</mat-label>
                 <input matInput formControlName="name" required />
                 <mat-error *ngIf="userGroup.get('name').errors?.required"
                   >Nome <strong>é necessário</strong>
+                </mat-error>
+                <mat-error *ngIf="userGroup.get('name').errors?.pattern"
+                  >Nome <strong>inválido!</strong>
                 </mat-error>
               </mat-form-field>
               <div class="emailAndPhone">
@@ -42,6 +65,9 @@ import { AddressService } from '@commons/entities/address/address.service';
                   <input matInput type="email" formControlName="email" />
                   <mat-error *ngIf="userGroup.get('email').errors?.required"
                     >Email <strong>é necessário</strong>
+                  </mat-error>
+                  <mat-error *ngIf="userGroup.get('email').errors?.email"
+                    >Email <strong>inválido</strong>
                   </mat-error>
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="phone">
@@ -58,9 +84,12 @@ import { AddressService } from '@commons/entities/address/address.service';
               </div>
               <mat-form-field appearance="outline" class="cpf">
                 <mat-label>CPF</mat-label>
-                <input matInput formControlName="cpf" />
+                <input matInput formControlName="cpf" mask="000.000.000-00" />
                 <mat-error *ngIf="userGroup.get('cpf').errors?.required"
                   >Cpf <strong>é necessário</strong>
+                </mat-error>
+                <mat-error *ngIf="userGroup.get('cpf').errors?.verifyCpf"
+                  >Cpf <strong>inválido!</strong>
                 </mat-error>
               </mat-form-field>
             </form>
@@ -121,24 +150,30 @@ import { AddressService } from '@commons/entities/address/address.service';
             </form>
           </mat-step>
           <mat-step [stepControl]="secretGroup">
-            <form [formGroup]="secretGroup" fxLayoutAlign="space-between">
+            <form [formGroup]="secretGroup">
               <ng-template matStepLabel>Senha</ng-template>
-              <mat-form-field fxFlex="49">
-                <input
-                  matInput
-                  formControlName="secret"
-                  placeholder="Senha"
-                  required
-                />
-              </mat-form-field>
-              <mat-form-field fxFlex="49">
-                <input
-                  matInput
-                  formControlName="secretConfirmation"
-                  placeholder="Confirmação"
-                  required
-                />
-              </mat-form-field>
+              <div class="secret-container">
+                <mat-form-field appearance="outline" class="secret-item">
+                  <input
+                    matInput
+                    formControlName="secret"
+                    placeholder="Senha"
+                    required
+                  />
+                </mat-form-field>
+                <mat-form-field
+                  appearance="outline"
+                  *ngIf="!userExists"
+                  class="secret-item confirmation"
+                >
+                  <input
+                    matInput
+                    formControlName="secretConfirmation"
+                    placeholder="Confirmação"
+                    required
+                  />
+                </mat-form-field>
+              </div>
             </form>
           </mat-step>
         </mat-stepper>
@@ -148,7 +183,7 @@ import { AddressService } from '@commons/entities/address/address.service';
   styles: [
     `
       mat-card {
-        width: 45%;
+        width: 48%;
       }
 
       .userGroup {
@@ -169,13 +204,25 @@ import { AddressService } from '@commons/entities/address/address.service';
       .cpf {
         flex: 0 0 45%;
       }
+      .header {
+        margin-bottom: 1em;
+      }
+      .secret-container {
+        display: flex;
+        flex-flow: row wrap;
+        justify-content: space-between;
+      }
+      .secret-item {
+        margin-right: 8px;
+        flex: 1 0 48%;
+      }
     `,
   ],
 })
 export class UserComponent implements OnInit {
-  public userId: number;
+  public userEntity: UserEntity;
 
-  public addressId: number;
+  public addressEntity: AddressEntity;
 
   public userGroup: FormGroup;
 
@@ -186,25 +233,33 @@ export class UserComponent implements OnInit {
   public states: Array<string>;
 
   constructor(
-    private formBuilder: FormBuilder,
-    private httpClient: HttpClient,
-    private snackBar: MatSnackBar,
+    public activatedRoute: ActivatedRoute,
     private addressService: AddressService,
+    private formBuilder: FormBuilder,
     private location: Location,
+    private snackBar: MatSnackBar,
     private userService: UserService
   ) {
-    this.states = AddressEntity.states;
-  }
-
-  public ngOnInit() {
     this.userGroup = this.formBuilder.group({
-      name: ['', Validators.required],
+      name: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern('[a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÍÏÓÔÕÖÚÇÑ ]*'),
+        ],
+      ],
       phone: ['', (Validators.pattern('[- +()0-9]+'), Validators.required)],
       email: ['', [Validators.email]],
-      cpf: ['', (Validators.pattern('[- +()0-9]+'), Validators.required)],
+      cpf: [
+        '',
+        [
+          Validators.pattern('[- +()0-9]+'),
+          CpfValidator.verifyCpf,
+          Validators.required,
+        ],
+      ],
       secret: [''],
-      addressId: [''],
-      features: [''],
+      address: [''],
     });
 
     this.addressGroup = this.formBuilder.group({
@@ -223,6 +278,38 @@ export class UserComponent implements OnInit {
       secretConfirmation: ['', Validators.required],
     });
 
+    this.states = AddressEntity.states;
+  }
+
+  private configFormGroups(): void {
+    let cpf: string = TypeUtil.isFullString(this.userEntity.extra['CPF'])
+      ? this.userEntity.extra['CPF']
+      : null;
+
+    this.userGroup.setValue({
+      name: this.userEntity.name || '',
+      phone: this.userEntity.phone || '',
+      email: this.userEntity.email || '',
+      cpf: cpf || '',
+      secret: this.userEntity.secret || '',
+      address: this.addressEntity || '',
+    });
+
+    this.addressGroup.setValue({
+      code: this.addressEntity.code || '',
+      street: this.addressEntity.street || '',
+      number: this.addressEntity.number || '',
+      city: this.addressEntity.city || '',
+      state: this.addressEntity.state || '',
+      country: this.addressEntity.country || '',
+      quarter: this.addressEntity.quarter || '',
+      extra: this.addressEntity.extra || '',
+    });
+
+    this.secretGroup.setValue({
+      secret: this.userEntity.secret || '',
+      secretConfirmation: this.userEntity.secret || '',
+    });
     this.userGroup.valueChanges
       .pipe(
         debounceTime(1000),
@@ -233,9 +320,8 @@ export class UserComponent implements OnInit {
             phone: group.phone,
             email: group.email,
             extra: { CPF: group.cpf },
-            addressId: group.addressId,
+            address: group.address,
             secret: group.secret,
-            features: FEATURE_CLIENT_DEFAULT,
           };
         })
       )
@@ -243,7 +329,7 @@ export class UserComponent implements OnInit {
         if (
           this.userGroup.valid &&
           this.secretGroup.valid &&
-          TypeUtil.hasText(this.addressId)
+          TypeUtil.hasText(this.addressEntity.id)
         ) {
           this.saveUser(json);
         }
@@ -299,17 +385,31 @@ export class UserComponent implements OnInit {
           this.userGroup.patchValue({ secret: json['secret'] });
         }
       });
+
+    if (TypeUtil.hasText(this.userEntity.secret)) {
+      this.secretGroup.get('secretConfirmation').disable();
+      this.secretGroup.get('secret').disable();
+    }
+  }
+
+  public ngOnInit() {
+    this.userEntity = new UserEntity(this.activatedRoute.snapshot.data.user);
+    this.addressEntity = new AddressEntity(this.userEntity.address);
+    this.configFormGroups();
   }
   private async saveAddress(partial: any): Promise<void> {
-    const save$: Observable<any> = this.addressId
-      ? this.addressService.update(this.addressId, new AddressEntity(partial))
+    const save$: Observable<any> = this.addressEntity.id
+      ? this.addressService.update(
+          this.addressEntity.id,
+          new AddressEntity(partial)
+        )
       : this.addressService.create(new AddressEntity(partial));
     return save$
       .toPromise()
       .then((address: AddressEntity) => {
         if (TypeUtil.exists(address.id)) {
-          this.addressId = address.id;
-          this.userGroup.patchValue({ addressId: address.id });
+          this.addressEntity.id = address.id;
+          this.userGroup.patchValue({ address: address });
         }
         return Promise.resolve();
       })
@@ -319,19 +419,32 @@ export class UserComponent implements OnInit {
   }
 
   private async saveUser(partial: any): Promise<void> {
-    partial['insuranceCompanyId'] = 0;
-    const save$: Observable<any> = this.userId
-      ? this.userService.update(this.userId, new UserEntity(partial))
+    console.debug(partial);
+    const save$: Observable<any> = this.userEntity.id
+      ? this.userService.update(this.userEntity.id, new UserEntity(partial))
       : this.userService.create(new UserEntity(partial));
     return save$
       .toPromise()
       .then((user: UserEntity) => {
         if (TypeUtil.exists(user.id)) {
-          this.userId = user.id;
+          this.userEntity.id = user.id;
         }
         this.snackBar.open('Usuário Salvo', null);
 
         return Promise.resolve();
+      })
+      .catch((error) => {
+        this.snackBar.open(error.error.message, null);
+      });
+  }
+
+  public onDeleteUser(): void {
+    this.userService
+      .delete(this.userEntity.id)
+      .toPromise()
+      .then(() => {
+        this.snackBar.open('Usuário excluído!', null);
+        this.location.back();
       })
       .catch((error) => {
         this.snackBar.open(error.error.message, null);
@@ -343,8 +456,7 @@ export class UserComponent implements OnInit {
   }
 
   private searchByCep(code: string): void {
-    const path: string = `https://viacep.com.br/ws/${code}/json`;
-    this.httpClient.get<ViaCep>(path).subscribe((json: ViaCep) => {
+    this.addressService.searchByCep(code).subscribe((json: ViaCep) => {
       this.addressGroup.patchValue({
         street: json.logradouro,
         quarter: json.bairro,
@@ -352,5 +464,10 @@ export class UserComponent implements OnInit {
         state: json.uf,
       });
     });
+  }
+
+  public get userExists() {
+    if (this.userEntity.id > 0) return true;
+    return;
   }
 }

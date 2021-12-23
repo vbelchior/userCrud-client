@@ -5,23 +5,23 @@ import {
   RouterStateSnapshot,
 } from '@angular/router';
 import { Observable, Subject } from 'rxjs';
-import { VehicleEntity } from './vehicle.entity';
-import { VehicleService } from './vehicle.service';
+import { UserEntity } from './user.entity';
+import { UserService } from './user.service';
 
 @Injectable({ providedIn: 'root' })
-export class VehiclesResolver implements Resolve<VehicleEntity[]> {
-  constructor(private vehicleService: VehicleService) {}
+export class UsersResolver implements Resolve<UserEntity[]> {
+  constructor(private userService: UserService) {}
 
   resolve(
     route: ActivatedRouteSnapshot,
     state: RouterStateSnapshot
-  ): Observable<VehicleEntity[]> {
-    const subject: Subject<VehicleEntity[]> = new Subject<VehicleEntity[]>();
+  ): Observable<UserEntity[]> {
+    const subject: Subject<UserEntity[]> = new Subject<UserEntity[]>();
 
-    const fetchPromise: Promise<VehicleEntity[]> = this.vehicleService
+    const fetchPromise: Promise<UserEntity[]> = this.userService
       .filter()
       .toPromise();
-    Promise.all<VehicleEntity[]>([fetchPromise])
+    Promise.all<UserEntity[]>([fetchPromise])
       .then(([fetch]) => {
         subject.next(fetch);
       })

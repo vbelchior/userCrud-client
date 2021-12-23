@@ -11,6 +11,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatListModule } from '@angular/material/list';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -24,8 +25,11 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { IConfig, NgxMaskModule } from 'ngx-mask';
 
 import { UserComponent } from './user.component';
-import { LoginComponent } from '../account/login.component';
+import { UsersComponent } from './users.component';
+import { UserResolver } from './user.resolver';
+import { UsersResolver } from './users.resolver';
 import { UserService } from './user.service';
+import { STEPPER_GLOBAL_OPTIONS } from '@angular/cdk/stepper';
 
 const maskConfig: Partial<IConfig> = {
   validation: false,
@@ -34,16 +38,22 @@ const maskConfig: Partial<IConfig> = {
 export const routes: Routes = [
   {
     path: 'users',
-    component: UserComponent,
+    component: UsersComponent,
+    resolve: {
+      users: UsersResolver,
+    },
   },
   {
-    path: 'login',
-    component: LoginComponent,
+    path: 'users/:id',
+    component: UserComponent,
+    resolve: {
+      user: UserResolver,
+    },
   },
 ];
 
 @NgModule({
-  declarations: [UserComponent, LoginComponent],
+  declarations: [UserComponent, UsersComponent],
   imports: [
     CommonModule,
     FormsModule,
@@ -60,6 +70,7 @@ export const routes: Routes = [
     MatIconModule,
     MatInputModule,
     MatMenuModule,
+    MatListModule,
     MatTableModule,
     MatProgressSpinnerModule,
     MatSelectModule,
@@ -70,6 +81,12 @@ export const routes: Routes = [
     NgxMaskModule.forRoot(maskConfig),
     RouterModule.forChild(routes),
   ],
-  providers: [UserService],
+  providers: [
+    UserService,
+    {
+      provide: STEPPER_GLOBAL_OPTIONS,
+      useValue: { showError: true },
+    },
+  ],
 })
 export class UserModule {}
